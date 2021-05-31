@@ -23,6 +23,8 @@ typedef PhotoViewGalleryPageChangedCallback = void Function(int index);
 typedef PhotoViewGalleryBuilder = PhotoViewGalleryPageOptions Function(
     BuildContext context, int index);
 
+typedef PositionAnimationListener = void Function();
+
 /// A [StatefulWidget] that shows multiple [PhotoView] widgets in a [PageView]
 ///
 /// Some of [PhotoView] constructor options are passed direct to [PhotoViewGallery] constructor. Those options will affect the gallery in a whole.
@@ -191,9 +193,27 @@ class PhotoViewGallery extends StatefulWidget {
   }
 }
 
-class _PhotoViewGalleryState extends State<PhotoViewGallery> {
+class _PhotoViewGalleryState extends State<PhotoViewGallery> with SingleTickerProviderStateMixin {
   late final PageController _controller =
       widget.pageController ?? PageController();
+
+  Offset _position = const Offset(0.0, 0.0);
+
+  late final AnimationController _positionAnimationController;
+  Animation<double>? _positionAnimation;
+  PositionAnimationListener? _positionAnimationListener;
+
+  @override
+  void initState() {
+    _positionAnimationController = AnimationController(duration: const Duration(milliseconds: 150), vsync: this);
+    super.initState();
+  }
+
+  @override
+  void dispose() {
+    _positionAnimationController.dispose();
+    super.dispose();
+  }
 
   void scaleStateChangedCallback(PhotoViewScaleState scaleState) {
     if (widget.scaleStateChangedCallback != null) {
@@ -283,8 +303,41 @@ class _PhotoViewGalleryState extends State<PhotoViewGallery> {
             errorBuilder: pageOption.errorBuilder,
           );
 
-    return ClipRect(
-      child: photoView,
+    return Transform.translate(
+      offset: _position,
+      child: GestureDetector(
+        onVerticalDragUpdate: (DragUpdateDetails details) {
+          setState(() {
+            _position += Offset(0.0, details.delta.dy);
+          });
+        },
+        onVerticalDragEnd: (DragEndDetails details) {
+          final double pixelsPerSecond = _position.dy.abs();
+          if (pixelsPerSecond > 160) {
+            Navigator.pop(context);
+          } else {
+
+            if (_positionAnimationListener != null) {
+              _positionAnimationController.removeListener(_positionAnimationListener!);
+            }
+
+            //stop pre
+            _positionAnimationController.stop();
+            _positionAnimationController.reset();
+
+            _positionAnimationListener = () {
+              setState(() {
+                _position = Offset(0.0, _positionAnimation?.value ?? 0.0);
+              });
+            };
+
+            _positionAnimation = Tween(begin: _position.dy, end: 0.0).animate(_positionAnimationController);
+            _positionAnimation!.addListener(_positionAnimationListener!);
+            _positionAnimationController.forward();
+          }
+        },
+        child: ClipRect(child: photoView),
+      ),
     );
   }
 
