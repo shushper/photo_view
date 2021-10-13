@@ -250,12 +250,14 @@ class PhotoView extends StatefulWidget {
     this.scaleStateCycle,
     this.onTapUp,
     this.onTapDown,
+    this.onScaleEnd,
     this.customSize,
     this.gestureDetectorBehavior,
     this.tightMode,
     this.filterQuality,
     this.disableGestures,
     this.errorBuilder,
+    this.enablePanAlways,
   })  : child = null,
         childSize = null,
         super(key: key);
@@ -283,11 +285,13 @@ class PhotoView extends StatefulWidget {
     this.scaleStateCycle,
     this.onTapUp,
     this.onTapDown,
+    this.onScaleEnd,
     this.customSize,
     this.gestureDetectorBehavior,
     this.tightMode,
     this.filterQuality,
     this.disableGestures,
+    this.enablePanAlways,
   })  : errorBuilder = null,
         imageProvider = null,
         gaplessPlayback = false,
@@ -368,6 +372,10 @@ class PhotoView extends StatefulWidget {
   /// location.
   final PhotoViewImageTapDownCallback? onTapDown;
 
+  /// A pointer that will trigger a scale has stopped contacting the screen at a
+  /// particular location.
+  final PhotoViewImageScaleEndCallback? onScaleEnd;
+
   /// [HitTestBehavior] to be passed to the internal gesture detector.
   final HitTestBehavior? gestureDetectorBehavior;
 
@@ -382,6 +390,10 @@ class PhotoView extends StatefulWidget {
   // Useful when custom gesture detector is used in child widget.
   final bool? disableGestures;
 
+  /// Enable pan the widget even if it's smaller than the hole parent widget.
+  /// Useful when you want to drag a widget without restrictions.
+  final bool? enablePanAlways;
+
   bool get _isCustomChild {
     return child != null;
   }
@@ -392,7 +404,8 @@ class PhotoView extends StatefulWidget {
   }
 }
 
-class _PhotoViewState extends State<PhotoView> {
+class _PhotoViewState extends State<PhotoView>
+    with AutomaticKeepAliveClientMixin {
   // image retrieval
 
   // controller
@@ -493,11 +506,13 @@ class _PhotoViewState extends State<PhotoView> {
                 scaleStateCycle: widget.scaleStateCycle,
                 onTapUp: widget.onTapUp,
                 onTapDown: widget.onTapDown,
+                onScaleEnd: widget.onScaleEnd,
                 outerSize: computedOuterSize,
                 gestureDetectorBehavior: widget.gestureDetectorBehavior,
                 tightMode: widget.tightMode,
                 filterQuality: widget.filterQuality,
                 disableGestures: widget.disableGestures,
+                enablePanAlways: widget.enablePanAlways,
               )
             : ImageWrapper(
                 imageProvider: widget.imageProvider!,
@@ -516,16 +531,21 @@ class _PhotoViewState extends State<PhotoView> {
                 scaleStateCycle: widget.scaleStateCycle,
                 onTapUp: widget.onTapUp,
                 onTapDown: widget.onTapDown,
+                onScaleEnd: widget.onScaleEnd,
                 outerSize: computedOuterSize,
                 gestureDetectorBehavior: widget.gestureDetectorBehavior,
                 tightMode: widget.tightMode,
                 filterQuality: widget.filterQuality,
                 disableGestures: widget.disableGestures,
                 errorBuilder: widget.errorBuilder,
+                enablePanAlways: widget.enablePanAlways,
               );
       },
     );
   }
+
+  @override
+  bool get wantKeepAlive => true;
 }
 
 /// The default [ScaleStateCycle]
@@ -563,6 +583,13 @@ typedef PhotoViewImageTapUpCallback = Function(
 typedef PhotoViewImageTapDownCallback = Function(
   BuildContext context,
   TapDownDetails details,
+  PhotoViewControllerValue controllerValue,
+);
+
+/// A type definition for a callback when a user finished scale
+typedef PhotoViewImageScaleEndCallback = Function(
+  BuildContext context,
+  ScaleEndDetails details,
   PhotoViewControllerValue controllerValue,
 );
 
